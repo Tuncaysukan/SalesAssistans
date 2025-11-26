@@ -24,7 +24,7 @@
 1) Veritabanı ve Kuyruk:
 - Postgres ve Redis çalışıyor olmalı (lokalde: `localhost`).
 2) Laravel API:
-- Dizin: `c:\Users\Tncy\Desktop\SalesAssistans\apps\laravel-api`
+- Dizin: ` SalesAssistans\apps\laravel-api`
 - Kurulum:
   ```
   composer install
@@ -35,7 +35,7 @@
   php artisan serve --host 127.0.0.1 --port 8000
   ```
 3) Node API:
-- Dizin: `c:\Users\Tncy\Desktop\SalesAssistans\apps\node-api`
+- Dizin: `SalesAssistans\apps\node-api`
 - Kurulum ve Çalıştırma:
   ```
   npm install
