@@ -1,0 +1,24 @@
+# Node
+node_modules/
+apps/node-api/node_modules/
+
+# PHP / Laravel
+vendor/
+apps/laravel-api/vendor/
+storage/*.key
+
+# Env
+.env
+apps/node-api/.env
+apps/laravel-api/.env
+
+# Logs
+*.log
+apps/node-api/*.log
+apps/laravel-api/storage/logs/*.log
+
+# OS/Editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

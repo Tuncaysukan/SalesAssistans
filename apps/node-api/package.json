@@ -1,0 +1,23 @@
+{
+  "name": "salesassistans-node-api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js",
+    "start:classify": "node src/workers/classify.worker.js",
+    "start:draft": "node src/workers/draft.worker.js",
+    "start:followup": "node src/workers/followup.worker.js"
+  },
+  "dependencies": {
+    "axios": "^1.7.7",
+    "bullmq": "^5.12.0",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2"
+  }
+}

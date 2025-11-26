@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="tr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Inbox (MVP Mock)</title>
+    <style>
+      body { font-family: Arial, sans-serif; margin: 0; display: flex; height: 100vh; }
+      #left { width: 280px; border-right: 1px solid #ddd; padding: 10px; overflow: auto; }
+      #right { flex: 1; display: flex; flex-direction: column; }
+      #messages { flex: 1; padding: 10px; overflow: auto; }
+      .conv { padding: 8px; border: 1px solid #eee; margin-bottom: 6px; cursor: pointer; }
+      .conv.overdue { border-color: #f00; }
+      .msg { margin: 6px 0; }
+      .in { color: #333; }
+      .out { color: #0070f3; }
+      #send { display: flex; padding: 8px; border-top: 1px solid #ddd; }
+      #send input { flex: 1; padding: 8px; }
+      #send button { margin-left: 8px; padding: 8px 12px; }
+      #draft { background: #fafafa; border-top: 1px dashed #ccc; padding: 8px; }
+    </style>
+  </head>
+  <body>
+    <div id="left">
+      <h3>Konuşmalar</h3>
+      <div id="list"></div>
+    </div>
+    <div id="right">
+      <div id="messages"></div>
+      <div id="draft"></div>
+      <div style="padding:8px;border-top:1px solid #eee;display:flex;align-items:center;gap:8px">
+        <label for="status">Durum:</label>
+        <select id="status">
+          <option value="new">new</option>
+          <option value="qualified">qualified</option>
+          <option value="proposal">proposal</option>
+          <option value="won">won</option>
+          <option value="lost">lost</option>
+        </select>
+        <button id="approveBtn">Taslağı Onayla & Gönder</button>
+      </div>
+      <div id="send">
+        <input id="text" placeholder="Mesaj yaz..." />
+        <button id="sendBtn">Gönder</button>
+      </div>
+    </div>
+    <script>
+      let currentId = null
+      async function loadConversations() {
+        const r = await fetch('/conversations')
+        const data = await r.json()
+        const list = document.getElementById('list')
+        list.innerHTML = ''
+        data.conversations.forEach(c => {
+          const div = document.createElement('div')
+          div.className = 'conv' + (c.overdue ? ' overdue' : '')
+          div.textContent = `${c.id} • ${c.channel} • ${c.status} • ${c.intent || '-'}`
+          div.onclick = () => selectConversation(c.id)
+          list.appendChild(div)
+        })
+      }
+      async function loadMessages(id) {
+        const r = await fetch(`/conversations/${id}/messages`)
+        const data = await r.json()
+        const messages = document.getElementById('messages')
+        messages.innerHTML = ''
+        data.messages.forEach(m => {
+          const div = document.createElement('div')
+          div.className = 'msg ' + (m.direction === 'in' ? 'in' : 'out')
+          div.textContent = `${new Date(m.timestamp).toLocaleString()} • ${m.direction} • ${m.type} • ${m.body}`
+          messages.appendChild(div)
+        })
+      }
+      async function loadDraft(id) {
+        const r = await fetch(`/ai/drafts/latest/${id}`)
+        const data = await r.json()
+        const draft = document.getElementById('draft')
+        if (data.draft && data.draft.text) {
+          draft.innerHTML = `<strong>AI Taslak:</strong> ${data.draft.text} <em>(${data.draft.next_action})</em>`
+        } else {
+          draft.innerHTML = ''
+        }
+      }
+      async function selectConversation(id) {
+        currentId = id
+        await loadMessages(id)
+        await loadDraft(id)
+        const listItem = [...document.querySelectorAll('#left .conv')].find(el => el.textContent.startsWith(id))
+        const statusSel = document.getElementById('status')
+        if (listItem) {
+          const parts = listItem.textContent.split('•').map(s => s.trim())
+          const status = parts[2]
+          statusSel.value = status
+        }
+      }
+      async function approveAndSend() {
+        if (!currentId) return
+        const r = await fetch(`/ai/drafts/latest/${currentId}`)
+        const data = await r.json()
+        const text = (data && data.draft && data.draft.text) ? data.draft.text : ''
+        if (!text) return
+        await fetch(`/conversations/${currentId}/send`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text }) })
+        await loadMessages(currentId)
+      }
+      async function updateStatus() {
+        if (!currentId) return
+        const status = document.getElementById('status').value
+        await fetch(`/conversations/${currentId}/status`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status }) })
+        await loadConversations()
+      }
+      document.getElementById('status').onchange = updateStatus
+      document.getElementById('approveBtn').onclick = approveAndSend
+      async function sendText() {
+        if (!currentId) return
+        const text = document.getElementById('text').value
+        document.getElementById('text').value = ''
+        await fetch(`/conversations/${currentId}/send`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text }) })
+        await loadMessages(currentId)
+      }
+      document.getElementById('sendBtn').onclick = sendText
+      loadConversations()
+      setInterval(loadConversations, 5000)
+    </script>
+  </body>
+</html>

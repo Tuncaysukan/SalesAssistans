@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="tr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Dashboard (MVP)</title>
+    <style>
+      body { font-family: Arial, sans-serif; margin: 20px; }
+      .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+      canvas { width: 100%; height: 240px; border: 1px solid #ddd; }
+      h2 { margin-top: 0; }
+    </style>
+  </head>
+  <body>
+    <h2>Günlük Rapor</h2>
+    <div id="summary"></div>
+    <div class="grid">
+      <div>
+        <h3>Inbound vs Outbound</h3>
+        <canvas id="io"></canvas>
+      </div>
+      <div>
+        <h3>Intent Dağılımı</h3>
+        <canvas id="intent"></canvas>
+      </div>
+      <div>
+        <h3>Funnel</h3>
+        <canvas id="funnel"></canvas>
+      </div>
+    </div>
+    <script>
+      function drawBar(canvas, labels, values, colors) {
+        const ctx = canvas.getContext('2d')
+        const w = canvas.width
+        const h = canvas.height
+        ctx.clearRect(0,0,w,h)
+        const max = Math.max(...values, 1)
+        const bw = Math.floor(w / (values.length * 2))
+        values.forEach((v,i) => {
+          const x = i * (bw*2) + bw
+          const bh = Math.floor((v / max) * (h - 20))
+          ctx.fillStyle = colors[i % colors.length]
+          ctx.fillRect(x, h - bh, bw, bh)
+          ctx.fillStyle = '#333'
+          ctx.fillText(labels[i], x, h - 5)
+        })
+      }
+      async function load() {
+        const r = await fetch('/reports/daily')
+        const data = await r.json()
+        const summary = document.getElementById('summary')
+        summary.textContent = `Inbound: ${data.inbound} • Outbound: ${data.outbound} • Avg First Resp (ms): ${data.avg_first_response_ms ?? '-'}`
+        const io = document.getElementById('io')
+        drawBar(io, ['inbound','outbound'], [data.inbound, data.outbound], ['#0070f3','#00b894'])
+        const intentKeys = Object.keys(data.intent_distribution)
+        const intentVals = intentKeys.map(k => data.intent_distribution[k])
+        const intent = document.getElementById('intent')
+        drawBar(intent, intentKeys.length ? intentKeys : ['unknown'], intentVals.length ? intentVals : [0], ['#fdcb6e','#e17055','#6c5ce7','#00cec9'])
+        const funnelKeys = Object.keys(data.funnel)
+        const funnelVals = funnelKeys.map(k => data.funnel[k])
+        const funnel = document.getElementById('funnel')
+        drawBar(funnel, funnelKeys.length ? funnelKeys : ['new'], funnelVals.length ? funnelVals : [0], ['#2d3436','#0984e3','#00b894','#d63031','#6c5ce7'])
+      }
+      load()
+      setInterval(load, 5000)
+    </script>
+  </body>
+ </html>

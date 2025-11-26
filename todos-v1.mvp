@@ -1,0 +1,123 @@
+# todos.v1 — DM Sales Assistant (Post-MVP / V1)
+
+## 0. product hardening
+- [ ] request logging + trace id (node + laravel)
+- [ ] global error handler + alerting (sentry vb.)
+- [ ] healthcheck endpoints:
+  - GET /health/node
+  - GET /health/laravel
+- [ ] rate-limit + retry policy for Meta APIs
+- [ ] dead-letter queue for failed AI / send jobs
+- [ ] backup + migration rollback plan
+
+## 1. multi-tenant v1
+- [ ] tenant onboarding wizard (vue):
+  - WA bağla (token + phone_number_id)
+  - IG bağla (token + page_id)
+  - sektör seç (butik/klinik/servis)
+- [ ] tenant plan/limit enforcement (laravel middleware):
+  - monthly_message_limit
+  - channel_limit (starter=1 kanal)
+  - user_seat_limit
+- [ ] tenant audit log (kim ne yaptı)
+
+## 2. billing / payments
+- [ ] plan tablosu (starter/growth/pro)
+- [ ] subscription lifecycle:
+  - trial_start, trial_end
+  - active/canceled/past_due
+- [ ] ödeme entegrasyonu (Stripe/LemonSqueezy/Paddle)
+- [ ] webhook’larla abonelik durumunu sync et
+- [ ] fatura/receipt maili (opsiyonel)
+
+## 3. template manager (WA 24h dışı için)
+- [ ] vue: template CRUD ekranı
+- [ ] laravel: templates tablosu:
+  - name, language, body, meta_id, status
+- [ ] node: Meta template sync:
+  - list templates
+  - status refresh (approved/rejected)
+- [ ] follow-up ve auto mesajlar için “hangi template kullanılacak” mapping
+
+## 4. sector playbooks (dikey hazır akış)
+- [ ] sektör seçimine göre hazır:
+  - intent setleri
+  - cevap şablonları
+  - follow-up SLA
+  - pipeline stage isimleri
+- [ ] playbook json paketleri:
+  - /playbooks/boutique.json
+  - /playbooks/clinic.json
+  - /playbooks/service.json
+- [ ] onboarding’de playbook’u tenant config’e kopyala
+
+## 5. knowledge base / ürün-fiyat kataloğu
+- [ ] vue: ürün/katalog ekranı
+- [ ] laravel: products tablosu:
+  - name, price, stock?, variants, faq, links
+- [ ] draft.worker prompt’a kataloğu dahil et
+- [ ] “ürün sorusu” intentinde otomatik katalog bağlama
+
+## 6. advanced AI (agentic layer)
+- [ ] “next best action” çıkaran job:
+  - lead soğuyor mu?
+  - hangi soruyu soralım?
+  - teklif gönderelim mi?
+- [ ] otomatik stage önerisi + açıklama (“neden?”)
+- [ ] kullanıcı feedback loop:
+  - “öneri iyi/kötü” butonu
+  - prompt tuning için log
+
+## 7. team workflow features
+- [ ] conversation assignment:
+  - assign_to_user_id
+  - claim/reassign
+- [ ] internal notes + mentions (@user)
+- [ ] SLA timer UI + overdue filtreleri
+- [ ] canned replies (ekip içi hazır cevap kutusu)
+
+## 8. integrations v1
+- [ ] CRM export connectors:
+  - HubSpot
+  - Pipedrive
+  - Zoho
+  - Google Sheets
+- [ ] webhook out:
+  - yeni lead oluştu
+  - stage değişti
+  - won/lost oldu
+- [ ] meeting scheduler connector:
+  - Google Calendar / Meet link oluşturma
+  - randevu intentinde öner
+
+## 9. analytics v1
+- [ ] gerçek funnel:
+  - new -> qualified -> proposal -> won/lost
+- [ ] intent bazlı dönüşüm oranı
+- [ ] first response time per user
+- [ ] “kaçan lead” metriği
+- [ ] export CSV/PDF
+
+## 10. security / compliance
+- [ ] PII masking (loglarda)
+- [ ] tenant data isolation testleri
+- [ ] role-based access (admin/agent/viewer)
+- [ ] data retention policy (silme/anonimleştirme)
+
+## 11. deployment v1
+- [ ] CI/CD pipeline:
+  - node build + tests
+  - laravel tests
+  - vue build
+- [ ] staging/prod env ayrımı
+- [ ] auto migrations on deploy
+- [ ] domain + SSL + reverse proxy
+
+## v1 done criteria
+- [ ] ödeme alınıyor, plan limitleri çalışıyor
+- [ ] WA template yönetimi tam oturdu
+- [ ] sektör bazlı hazır akışla 10 dk onboarding
+- [ ] katalog/KB ile draft kalitesi yükseldi
+- [ ] takım içi atama/not/SLA düzgün
+- [ ] 3 temel entegrasyon (Sheets + 1 CRM + Calendar)
+- [ ] analytics sayfası “satışa etki”yi net gösteriyor

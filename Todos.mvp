@@ -1,0 +1,129 @@
+# todos.mvp — DM Sales Assistant (WA + IG + AI) MVP
+
+## 0. setup / infra
+- [ ] monorepo oluştur:
+  - apps/node-api
+  - apps/laravel-api
+  - apps/vue-web
+- [ ] docker-compose: postgres + redis
+- [ ] .env.example hazırla:
+  - DB_*, REDIS_*
+  - META_APP_SECRET
+  - WA_PHONE_NUMBER_ID / WA_TOKEN
+  - IG_PAGE_ID / IG_TOKEN
+  - LARAVEL_URL
+  - OPENAI_API_KEY
+
+## 1. database (laravel)
+- [ ] migrations:
+  - tenants (wa_phone_number_id, ig_page_id, wa_config json, ig_config json)
+  - users (tenant_id, role)
+  - contacts (tenant_id, channel, external_contact_id, tags json)
+  - conversations (tenant_id, contact_id, channel, status, intent, lead_score, last_customer_message_at, last_agent_message_at, ai_summary)
+  - messages (tenant_id, conversation_id, direction, external_message_id UNIQUE, type, body, meta json)
+  - ai_jobs (tenant_id, conversation_id, message_id, job_type, input json, output json, status, cost_tokens)
+- [ ] models + relations
+
+## 2. internal ingest api (laravel)
+- [ ] POST /internal/ingest
+  - tenant_key ile tenant bul (wa_phone_number_id veya ig_page_id)
+  - contact upsert
+  - conversation upsert
+  - inbound message insert (idempotent)
+- [ ] POST /internal/intent
+  - external_message_id -> conversation bul
+  - intent/tags/lead_score güncelle
+- [ ] POST /internal/ai/classified
+  - ai_jobs yaz
+  - conversation intent/score/status güncelle
+- [ ] POST /internal/ai/draft
+  - ai_jobs yaz (draft)
+
+## 3. whatsapp ingest (node)
+- [ ] express server + POST /webhooks/whatsapp
+- [ ] signature verify (secret varsa)
+- [ ] WA payload normalize -> internal schema
+- [ ] tenant_key çıkar (phone_number_id)
+- [ ] /internal/ingest çağır
+- [ ] heuristic intent çalıştır
+- [ ] confidence < 0.75 ise ai:classify job enqueue
+
+## 4. instagram ingest (node)
+- [ ] POST /webhooks/instagram
+- [ ] signature verify
+- [ ] IG payload normalize
+- [ ] tenant_key çıkar (ig_page_id)
+- [ ] /internal/ingest çağır
+- [ ] heuristic intent pipeline'a sok
+
+## 5. heuristic intent (node)
+- [ ] regex map:
+  - price_inquiry (fiyat/ne kadar/kaç tl/ücret)
+  - appointment (randevu/tarih/saat/uygun musunuz)
+  - shipping (kargo/teslimat/kaç günde/adres)
+  - other
+- [ ] heuristicIntent(text) -> {intent, confidence}
+
+## 6. ai classify worker (node)
+- [ ] bullmq consumer: classify.worker
+- [ ] input:
+  - last message
+  - last 2-3 messages
+  - ai_summary (laravel’den çek)
+- [ ] llm output zorla (json):
+  - intent, confidence, entities, urgency, suggested_stage
+- [ ] /internal/ai/classified çağır
+
+## 7. ai draft worker (node)
+- [ ] bullmq consumer: draft.worker
+- [ ] trigger:
+  - her inbound sonrası veya intent belirli ise
+- [ ] llm output:
+  - draft, next_action
+- [ ] /internal/ai/draft çağır
+- [ ] vue tarafına suggestion event (ilk aşama polling ok)
+
+## 8. send pipeline (laravel + node)
+- [ ] POST /conversations/{id}/send (laravel)
+  - body: {text}
+  - 24h kuralı:
+    - <24h => text send
+    - >=24h => template send (tenant wa_config)
+- [ ] node WA send client:
+  - text send
+  - template send
+- [ ] outbound message insert
+- [ ] last_agent_message_at update
+
+## 9. follow-up automation (node)
+- [ ] SLA map:
+  - price_inquiry => 2h
+  - appointment => 1h
+  - other => 6h
+- [ ] inbound sonrası followup job schedule
+- [ ] followup.worker:
+  - SLA doldu ve agent cevap yoksa => overdue flag + UI alarm
+  - opsiyonel auto-draft
+
+## 10. vue inbox ui (minimum)
+- [ ] inbox list (conversations)
+- [ ] conversation view (messages)
+- [ ] send box -> /conversations/{id}/send
+- [ ] ai draft card (approve & send)
+- [ ] status dropdown (new/qualified/proposal/won/lost)
+
+## 11. basic reporting
+- [ ] nightly cron:
+  - inbound/outbound count
+  - avg first response time
+  - intent distribution
+  - funnel counts
+- [ ] vue dashboard 2-3 grafik
+
+## done criteria
+- [ ] WA + IG mesajları DB’ye düşüyor
+- [ ] inbox’tan okunup cevaplanıyor
+- [ ] intent + draft AI çalışıyor
+- [ ] 24h/template send doğru işliyor
+- [ ] follow-up overdue alarm veriyor
+- [ ] günlük rapor görülebiliyor
