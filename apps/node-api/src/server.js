@@ -4,12 +4,38 @@ import axios from 'axios'
 import dotenv from 'dotenv'
 import { Queue } from 'bullmq'
 import { sendText, sendTemplate } from './wa/send.js'
+import * as Sentry from '@sentry/node'
+import { nodeProfilingIntegration } from '@sentry/profiling-node'
 
 dotenv.config()
+
+if (process.env.SENTRY_DSN) {
+  Sentry.init({
+    dsn: process.env.SENTRY_DSN,
+    integrations: [nodeProfilingIntegration()],
+    tracesSampleRate: Number(process.env.SENTRY_TRACES_SAMPLE_RATE || 0.1),
+    profilesSampleRate: Number(process.env.SENTRY_PROFILES_SAMPLE_RATE || 0.1)
+  })
+}
 
 const app = express()
 app.use(express.json({ type: '*/*' }))
 app.use(express.static('public'))
+if (process.env.SENTRY_DSN) {
+  app.use(Sentry.Handlers.requestHandler())
+}
+
+app.use((req, res, next) => {
+  const id = req.headers['x-trace-id'] || Math.random().toString(16).slice(2) + Date.now().toString(16)
+  req.traceId = id
+  res.setHeader('X-Trace-Id', id)
+  const t0 = Date.now()
+  res.on('finish', () => {
+    const dt = Date.now() - t0
+    console.log(`[${id}] ${req.method} ${req.path} ${res.statusCode} ${dt}ms`)
+  })
+  next()
+})
 
 const redisHost = process.env.REDIS_HOST || '127.0.0.1'
 const redisPort = Number(process.env.REDIS_PORT || 6379)
@@ -133,6 +159,9 @@ app.post('/webhooks/instagram', async (req, res) => {
   res.json({ ok: true })
 })
 
+app.get('/health/node', (req, res) => {
+  res.json({ ok: true, ts: Date.now(), uptime_s: Math.floor(process.uptime()) })
+})
 const port = Number(process.env.NODE_API_PORT || 3001)
 const store = {
   tenants: new Map(),
@@ -169,7 +198,13 @@ async function internalGet(path) {
   const base = process.env.LARAVEL_URL || `http://localhost:${port}`
   const bodyJson = ''
   const { sig, ts } = signInternal(bodyJson)
-  const r = await axios.get(`${base}${path}`, { headers: sig ? { 'X-Internal-Signature': sig, 'X-Internal-Timestamp': ts } : {} })
+  let r
+  try {
+    r = await axios.get(`${base}${path}`, { headers: sig ? { 'X-Internal-Signature': sig, 'X-Internal-Timestamp': ts } : {} })
+  } catch (e) {
+    if (process.env.SENTRY_DSN) Sentry.captureException(e)
+    throw e
+  }
   return r.data
 }
 
@@ -395,4 +430,15 @@ app.post('/internal/followup/overdue', (req, res) => {
   if (!conv) return res.status(404).json({ ok: false })
   conv.overdue = true
   res.json({ ok: true })
+})
+if (process.env.SENTRY_DSN) {
+  app.use(Sentry.Handlers.errorHandler())
+}
+app.get('/debug/error', (req, res) => {
+  try {
+    throw new Error('debug error')
+  } catch (e) {
+    if (process.env.SENTRY_DSN) Sentry.captureException(e)
+    res.status(500).json({ ok: false })
+  }
 })
