@@ -431,6 +431,41 @@ app.post('/internal/followup/overdue', (req, res) => {
   conv.overdue = true
   res.json({ ok: true })
 })
+app.get('/admin/tenants', async (req, res) => {
+  try {
+    const data = await internalGet('/admin/tenants')
+    res.json(data)
+  } catch {
+    res.status(500).json({ ok: false })
+  }
+})
+app.post('/admin/tenants', async (req, res) => {
+  try {
+    const base = process.env.LARAVEL_URL || `http://localhost:${port}`
+    const r = await axios.post(`${base}/admin/tenants`, req.body)
+    res.status(r.status).json(r.data)
+  } catch {
+    res.status(500).json({ ok: false })
+  }
+})
+app.get('/admin/users', async (req, res) => {
+  try {
+    const q = req.query.tenant_id ? `?tenant_id=${encodeURIComponent(req.query.tenant_id)}` : ''
+    const data = await internalGet(`/admin/users${q}`)
+    res.json(data)
+  } catch {
+    res.status(500).json({ ok: false })
+  }
+})
+app.post('/admin/users', async (req, res) => {
+  try {
+    const base = process.env.LARAVEL_URL || `http://localhost:${port}`
+    const r = await axios.post(`${base}/admin/users`, req.body)
+    res.status(r.status).json(r.data)
+  } catch {
+    res.status(500).json({ ok: false })
+  }
+})
 if (process.env.SENTRY_DSN) {
   app.use(Sentry.Handlers.errorHandler())
 }

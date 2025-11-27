@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Admin Panel</title>
+  <style>
+    body{font-family:system-ui,Segoe UI,Arial;padding:20px}
+    h2{margin-top:24px}
+    input,select,button{padding:8px;margin:4px}
+    table{border-collapse:collapse;width:100%;margin-top:8px}
+    th,td{border:1px solid #ddd;padding:8px}
+    .row{display:flex;gap:24px;flex-wrap:wrap}
+    .card{border:1px solid #ddd;padding:16px;flex:1;min-width:320px}
+  </style>
+</head>
+<body>
+  <h1>Admin Panel</h1>
+  <div class="row">
+    <div class="card">
+      <h2>Tenants</h2>
+      <div>
+        <input id="wa" placeholder="wa_phone_number_id">
+        <input id="ig" placeholder="ig_page_id">
+        <button id="createTenant">Oluştur</button>
+      </div>
+      <table>
+        <thead><tr><th>ID</th><th>WA</th><th>IG</th></tr></thead>
+        <tbody id="tenantsBody"></tbody>
+      </table>
+    </div>
+    <div class="card">
+      <h2>Users</h2>
+      <div>
+        <input id="u_name" placeholder="name">
+        <input id="u_email" placeholder="email">
+        <input id="u_pass" placeholder="password" type="password">
+        <select id="u_role"><option value="agent">agent</option><option value="admin">admin</option><option value="viewer">viewer</option></select>
+        <input id="u_tenant" placeholder="tenant_id">
+        <button id="createUser">Oluştur</button>
+      </div>
+      <div>
+        <input id="filterTenant" placeholder="tenant_id filtresi">
+        <button id="loadUsers">Listele</button>
+      </div>
+      <table>
+        <thead><tr><th>ID</th><th>Ad</th><th>Email</th><th>Rol</th><th>Tenant</th></tr></thead>
+        <tbody id="usersBody"></tbody>
+      </table>
+    </div>
+  </div>
+  <script>
+    async function loadTenants(){
+      const r = await fetch('/admin/tenants');
+      const j = await r.json();
+      const data = j.items && j.items.data ? j.items.data : [];
+      const tbody = document.getElementById('tenantsBody');
+      tbody.innerHTML = '';
+      for(const t of data){
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${t.id||''}</td><td>${t.wa_phone_number_id||''}</td><td>${t.ig_page_id||''}</td>`;
+        tbody.appendChild(tr);
+      }
+    }
+    async function createTenant(){
+      const wa = document.getElementById('wa').value;
+      const ig = document.getElementById('ig').value;
+      const r = await fetch('/admin/tenants',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({wa_phone_number_id:wa,ig_page_id:ig})});
+      if(r.ok){ await loadTenants(); }
+    }
+    async function loadUsers(){
+      const tenantId = document.getElementById('filterTenant').value;
+      const url = tenantId?(`/admin/users?tenant_id=${encodeURIComponent(tenantId)}`):'/admin/users';
+      const r = await fetch(url);
+      const j = await r.json();
+      const data = j.items && j.items.data ? j.items.data : [];
+      const tbody = document.getElementById('usersBody');
+      tbody.innerHTML = '';
+      for(const u of data){
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${u.id||''}</td><td>${u.name||''}</td><td>${u.email||''}</td><td>${u.role||''}</td><td>${u.tenant_id||''}</td>`;
+        tbody.appendChild(tr);
+      }
+    }
+    async function createUser(){
+      const name = document.getElementById('u_name').value;
+      const email = document.getElementById('u_email').value;
+      const password = document.getElementById('u_pass').value;
+      const role = document.getElementById('u_role').value;
+      const tenant_id = document.getElementById('u_tenant').value?Number(document.getElementById('u_tenant').value):undefined;
+      const r = await fetch('/admin/users',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,email,password,role,tenant_id})});
+      if(r.ok){ await loadUsers(); }
+    }
+    document.getElementById('createTenant').addEventListener('click',createTenant);
+    document.getElementById('loadUsers').addEventListener('click',loadUsers);
+    document.getElementById('createUser').addEventListener('click',createUser);
+    loadTenants();
+  </script>
+</body>
+</html>

@@ -15,7 +15,6 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'internal' => \App\Http\Middleware\InternalSignature::class,
         ]);
-        $middleware->append(\App\Http\Middleware\InternalSignature::class);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

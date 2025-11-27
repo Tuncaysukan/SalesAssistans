@@ -3,6 +3,8 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\InternalController;
 use App\Http\Controllers\ConversationsController;
+use App\Http\Controllers\Admin\TenantsController;
+use App\Http\Controllers\Admin\UsersController;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Redis;
 
@@ -27,4 +29,18 @@ Route::get('/health/laravel', function () {
 
 Route::get('/debug/error', function () {
     throw new \Exception('debug error');
+});
+
+Route::prefix('admin')->group(function () {
+    Route::get('/tenants', [TenantsController::class, 'index']);
+    Route::get('/tenants/{id}', [TenantsController::class, 'show']);
+    Route::post('/tenants', [TenantsController::class, 'store']);
+    Route::put('/tenants/{id}', [TenantsController::class, 'update']);
+    Route::delete('/tenants/{id}', [TenantsController::class, 'destroy']);
+
+    Route::get('/users', [UsersController::class, 'index']);
+    Route::get('/users/{id}', [UsersController::class, 'show']);
+    Route::post('/users', [UsersController::class, 'store']);
+    Route::put('/users/{id}', [UsersController::class, 'update']);
+    Route::delete('/users/{id}', [UsersController::class, 'destroy']);
 });
